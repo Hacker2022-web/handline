@@ -258,3 +258,9 @@ npm run build
   <sub>Handline is an assistive multimodal prototype designed for accessible communication.</sub><br/>
   <strong>Made with React · TypeScript · Three.js · MediaPipe · Gemma · ElevenLabs</strong>
 </div>
+
+## Handheld device demo
+
+For a separate handheld presentation, select **Handheld demo** in the app, or open `/?device=handheld`. The macOS app also offers **Demo → Handheld demo** and **Demo → Desktop demo**. The orange device frame uses the existing webcam recognition, saved phrases, runtime selection, and speech engine. This is a software concept demonstration; physical buttons, battery telemetry, cellular connectivity and device hardware are not connected.
+
+![Handheld demo](docs/handheld-demo.png)

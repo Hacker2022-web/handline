@@ -1,4 +1,481 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101c19"><title>Handline — Explore the experience</title><style>
-:root{font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#ecf9ef;background:#101c19}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 75% 20%,#284939 0,transparent 42%),#101c19}a{color:inherit}header{display:flex;justify-content:space-between;align-items:center;padding:24px clamp(24px,6vw,90px);border-bottom:1px solid #ffffff1b}header strong{font-size:24px;letter-spacing:-1px}header strong span{color:#9ee6b8}header a{font-size:13px;color:#b6d0be;text-decoration:none}.layout{max-width:1450px;margin:auto;padding:clamp(30px,5vw,76px);display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:center}.eyebrow{color:#9ee6b8;font-size:11px;letter-spacing:.23em;font-weight:700;text-transform:uppercase}h1{font-size:clamp(48px,7vw,98px);line-height:.94;letter-spacing:-.065em;margin:25px 0;color:#f2fff5}h1 em{font-style:normal;color:#a7e6bc}.intro{font-size:clamp(16px,1.5vw,19px);line-height:1.6;color:#b7cbbd;max-width:490px}.stage{height:clamp(340px,48vw,590px);position:relative;border:1px solid #a7e6bc33;border-radius:30px;background:linear-gradient(145deg,#294536a8,#12221be0);overflow:hidden;touch-action:pan-y}.stage canvas{width:100%;height:100%;display:block}.stage-label{position:absolute;top:24px;left:24px;font-size:11px;letter-spacing:.15em;color:#b6d9bf;pointer-events:none}.hint{position:absolute;bottom:23px;left:24px;font-size:12px;color:#bad0bf;pointer-events:none}.modules{max-width:1450px;margin:0 auto;padding:0 clamp(30px,5vw,76px) 80px}.tabs{display:flex;gap:10px;flex-wrap:wrap}.tabs button{border:1px solid #a6dbb83b;color:#c0d8c6;background:#ffffff08;border-radius:100px;padding:12px 18px;font:inherit;font-size:13px;cursor:pointer}.tabs button[aria-selected=true]{background:#b8efca;color:#173324;border-color:#b8efca}.detail{margin-top:18px;min-height:170px;padding:28px;border:1px solid #ffffff1c;border-radius:22px;background:#ffffff07;display:grid;grid-template-columns:1fr 2fr;gap:20px}.detail h2{margin:0;font-size:27px;letter-spacing:-.04em}.detail p{margin:0;color:#bfd0c3;line-height:1.7;max-width:700px}.detail small{display:block;margin-top:16px;color:#8fcda3}.links{margin-top:25px;display:flex;gap:20px;flex-wrap:wrap}.links a{font-size:14px;color:#b8efca}footer{border-top:1px solid #ffffff1b;padding:25px clamp(30px,5vw,76px);color:#86a492;font-size:12px}@media(max-width:760px){.layout{grid-template-columns:1fr}.stage{height:360px}.detail{grid-template-columns:1fr}h1{font-size:58px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
-</style></head><body><header><strong>handline<span>.</span></strong><a href="../../README.md">THE PROJECT ↗</a></header><main><section class="layout"><div><p class="eyebrow">An interactive introduction</p><h1>Your gestures.<br><em>Your words.</em></h1><p class="intro">A personal gesture communicator that turns movements into phrases, with space for your own voice.</p><div class="links"><a href="#explore">Explore the modules ↓</a><a href="https://github.com/TatvagnaTandel/handline">View the repository ↗</a></div></div><div class="stage" id="stage" aria-label="Interactive three-dimensional abstract hand. Drag to rotate."><span class="stage-label">01 / THE GESTURE</span><span class="hint" id="hint">DRAG TO ROTATE · EXPLORE BELOW</span></div></section><section class="modules" id="explore"><p class="eyebrow">A closer look / select a module</p><div class="tabs" role="tablist" aria-label="Handline modules"><button role="tab" aria-selected="true" data-index="0">01 &nbsp; Recognition</button><button role="tab" aria-selected="false" data-index="1">02 &nbsp; Your vocabulary</button><button role="tab" aria-selected="false" data-index="2">03 &nbsp; Voice</button><button role="tab" aria-selected="false" data-index="3">04 &nbsp; Intelligence</button></div><div class="detail" role="tabpanel" aria-live="polite"><h2 id="detail-title">Movement becomes meaning.</h2><div><p id="detail-text">MediaPipe tracks up to two hands in the browser. Handline compares normalized landmarks with your examples and waits for a stable, unambiguous match.</p><small id="detail-note">LOCAL TRACKING · VISIBLE MATCH SCORE</small></div></div></section></main><footer>HANDLINE / YOUR GESTURES. YOUR WORDS. &nbsp; · &nbsp; Interactive concept visualization</footer><script type="module" src="./showcase.js"></script></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101c19">
+  <title>Handline — Interactive 3D Gesture & Landmark Showcase</title>
+  <link rel="icon" type="image/svg+xml" href="../../public/handline.svg">
+  <style>
+    :root {
+      --bg: #101c19;
+      --bg-surface: #172b24;
+      --border: #ffffff1f;
+      --accent: #9ee6b8;
+      --accent-glow: #63d995;
+      --text: #ecf9ef;
+      --text-muted: #a3baa9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at 80% 20%, #204032 0%, transparent 48%),
+                  radial-gradient(circle at 20% 80%, #173327 0%, transparent 45%),
+                  var(--bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px clamp(20px, 5vw, 60px);
+      border-bottom: 1px solid var(--border);
+      background: rgba(16, 28, 25, 0.85);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .brand span { color: var(--accent); }
+    .header-links {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+    .header-links a {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+    .header-links a:hover {
+      color: var(--text);
+      border-color: var(--border);
+      background: rgba(255,255,255,0.04);
+    }
+    .main-grid {
+      max-width: 1540px;
+      margin: 0 auto;
+      padding: clamp(24px, 4vw, 48px);
+      display: grid;
+      grid-template-columns: 1fr 1.35fr;
+      gap: clamp(24px, 4vw, 48px);
+      align-items: start;
+      width: 100%;
+    }
+    .hero-col {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(158, 230, 184, 0.12);
+      border: 1px solid rgba(158, 230, 184, 0.3);
+      color: var(--accent);
+      padding: 5px 12px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      width: fit-content;
+    }
+    h1 {
+      font-size: clamp(38px, 5.2vw, 68px);
+      line-height: 1.02;
+      letter-spacing: -0.05em;
+      color: #f7fff9;
+    }
+    h1 em {
+      font-style: normal;
+      color: var(--accent);
+      background: linear-gradient(135deg, #b9f7d0, #69d499);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .lead {
+      font-size: clamp(15px, 1.4vw, 17px);
+      line-height: 1.65;
+      color: var(--text-muted);
+      max-width: 520px;
+    }
+    .controls-panel {
+      background: rgba(255,255,255,0.035);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 10px;
+    }
+    .panel-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .pose-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .pose-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      text-align: center;
+    }
+    .pose-btn:hover {
+      background: rgba(158, 230, 184, 0.18);
+      border-color: var(--accent);
+    }
+    .pose-btn.active {
+      background: var(--accent);
+      color: #10241a;
+      border-color: var(--accent);
+      font-weight: 700;
+    }
+    .action-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .action-btn {
+      flex: 1;
+      min-width: 140px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: all 0.18s ease;
+    }
+    .action-btn:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: #69d49988;
+    }
+    .action-btn.active-toggle {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(158, 230, 184, 0.12);
+    }
+    /* 3D Viewport Stage */
+    .viewport-col {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .stage-wrapper {
+      width: 100%;
+      height: clamp(420px, 58vh, 640px);
+      position: relative;
+      border-radius: 24px;
+      border: 1px solid rgba(158, 230, 184, 0.28);
+      background: linear-gradient(145deg, rgba(28, 54, 42, 0.75), rgba(13, 27, 21, 0.95));
+      overflow: hidden;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
+    }
+    #stage-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+    #stage-canvas:active { cursor: grabbing; }
+    .stage-hud {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .hud-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      color: var(--accent);
+      text-transform: uppercase;
+      background: rgba(16, 28, 25, 0.85);
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      width: fit-content;
+    }
+    .hud-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: rgba(16, 28, 25, 0.75);
+      padding: 3px 8px;
+      border-radius: 4px;
+      width: fit-content;
+    }
+    .joint-inspector-card {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      background: rgba(16, 28, 25, 0.92);
+      border: 1px solid rgba(158, 230, 184, 0.35);
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 12px;
+      backdrop-filter: blur(10px);
+      pointer-events: none;
+      max-width: 260px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      transition: opacity 0.2s ease;
+    }
+    .joint-name {
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 13px;
+    }
+    .joint-coords {
+      font-family: monospace;
+      color: #d1ead8;
+      font-size: 11px;
+    }
+    .joint-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-top: 2px;
+    }
+    .stage-hint {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: rgba(16, 28, 25, 0.8);
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      pointer-events: none;
+    }
+    /* Modules Section */
+    .modules-section {
+      max-width: 1540px;
+      margin: 0 auto;
+      padding: 0 clamp(24px, 4vw, 48px) 80px;
+      width: 100%;
+    }
+    .tabs-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .tab-btn {
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      background: rgba(255,255,255,0.04);
+      border-radius: 100px;
+      padding: 10px 18px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover {
+      color: var(--text);
+      background: rgba(255,255,255,0.08);
+    }
+    .tab-btn.active-tab {
+      background: var(--accent);
+      color: #0e2217;
+      border-color: var(--accent);
+      font-weight: 700;
+    }
+    .feature-card {
+      background: rgba(255,255,255,0.035);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: clamp(24px, 3vw, 36px);
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 24px;
+    }
+    .feature-card h2 {
+      font-size: clamp(22px, 2.5vw, 32px);
+      letter-spacing: -0.04em;
+      line-height: 1.15;
+    }
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+    .feature-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .feature-tag {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: rgba(158, 230, 184, 0.12);
+      color: var(--accent);
+    }
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px clamp(24px, 4vw, 48px);
+      color: var(--text-muted);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    @media (max-width: 900px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .feature-card { grid-template-columns: 1fr; }
+      .pose-buttons { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" class="brand">handline<span>.</span> 3D Studio</a>
+    <div class="header-links">
+      <a href="/">← Back to Communicator</a>
+      <a href="https://github.com/TatvagnaTandel/AIDN" target="_blank" rel="noreferrer">GitHub Repo ↗</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="main-grid">
+      <!-- Left Column: Hero & Interactive Controls -->
+      <div class="hero-col">
+        <div class="badge">Live WebGL 3D Landmark Simulator</div>
+        <h1>Your gestures.<br><em>Articulated in 3D.</em></h1>
+        <p class="lead">
+          Explore how Handline captures, normalizes, and verifies hand poses using 21 spatial landmarks, dual-hand geometry vectors, and multimodal visual reasoning.
+        </p>
+
+        <div class="controls-panel">
+          <div class="panel-label">Choose a gesture to simulate</div>
+          <div class="pose-buttons" role="group" aria-label="Pose selectors">
+            <button class="pose-btn active" data-pose="open_palm">Open Palm</button>
+            <button class="pose-btn" data-pose="thumbs_up">Thumbs Up</button>
+            <button class="pose-btn" data-pose="thumbs_down">Thumbs Down</button>
+            <button class="pose-btn" data-pose="victory">Victory Sign</button>
+            <button class="pose-btn" data-pose="dual_namaste">Dual Namaste</button>
+            <button class="pose-btn" data-pose="dual_frame">Dual Framing</button>
+          </div>
+
+          <div class="panel-label">Interactive 3D Modes</div>
+          <div class="action-row">
+            <button id="toggle-hands-btn" class="action-btn">
+              <span>Dual-Hand Mode</span>
+            </button>
+            <button id="toggle-inspector-btn" class="action-btn">
+              <span>Gemma Contact Sheet</span>
+            </button>
+            <button id="simulate-speech-btn" class="action-btn">
+              <span>Simulate Voice Pulse</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: 3D Viewport Stage -->
+      <div class="viewport-col">
+        <div class="stage-wrapper" id="stage-wrapper">
+          <canvas id="stage-canvas" aria-label="3D Interactive Hand Model. Drag to rotate, scroll to zoom."></canvas>
+
+          <div class="stage-hud">
+            <span class="hud-title" id="hud-pose-title">OPEN PALM · 21 LANDMARKS</span>
+            <span class="hud-subtitle" id="hud-status">MATCH SCORE: 98% · NORM: SCALE INVARIANT</span>
+          </div>
+
+          <div class="stage-hint">DRAG TO ORBIT · SCROLL TO ZOOM · HOVER JOINTS</div>
+
+          <div class="joint-inspector-card" id="joint-card">
+            <div class="joint-name" id="joint-name">Hover a Landmark</div>
+            <div class="joint-coords" id="joint-coords">X: 0.000 · Y: 0.000 · Z: 0.000</div>
+            <div class="joint-desc" id="joint-desc">Hover over any hand joint sphere to inspect its normalized 3D coordinates.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features & Modules Section -->
+    <div class="modules-section">
+      <div class="tabs-row" role="tablist">
+        <button class="tab-btn active-tab" data-module="0">01 / Spatial Landmark Normalization</button>
+        <button class="tab-btn" data-module="1">02 / Dual-Hand 126-D Vector Mapping</button>
+        <button class="tab-btn" data-module="2">03 / Gemma Multimodal Visual Reasoner</button>
+        <button class="tab-btn" data-module="3">04 / ElevenLabs Voice Synthesis & Banking</button>
+      </div>
+
+      <div class="feature-card" id="feature-card">
+        <h2 id="feature-title">Invariant 21-Point Skeleton Tracking</h2>
+        <div>
+          <p id="feature-desc">
+            MediaPipe extracts 21 wrist-relative 3D landmarks at 12 fps. Handline translates and scale-normalizes each point against the distance between wrist and middle MCP, guaranteeing consistent recognition across varying camera distances while preserving orientation.
+          </p>
+          <div class="feature-tags" id="feature-tags">
+            <span class="feature-tag">Local WASM</span>
+            <span class="feature-tag">Orientation-Preserving</span>
+            <span class="feature-tag">Zero Server Latency</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span>HANDLINE · Your gestures, your words · Built with React, TypeScript, MediaPipe, Gemma, and ElevenLabs.</span>
+    <span>Interactive Three.js 3D Demonstration</span>
+  </footer>
+
+  <script type="module" src="./showcase.js"></script>
+</body>
+</html>

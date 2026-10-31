@@ -10,6 +10,20 @@ const wasm = path.join(root, 'node_modules/@mediapipe/tasks-vision/wasm');
 for (const file of await readdir(wasm)) {
   if (/\.(wasm|js)$/.test(file)) await copyFile(path.join(wasm, file), path.join(root, 'public/mediapipe', file));
 }
+const threeSrc = path.join(root, 'node_modules/three/build/three.module.js');
+const threeCoreSrc = path.join(root, 'node_modules/three/build/three.core.js');
+try {
+  await access(threeSrc);
+  await mkdir(path.join(root, 'public/showcase'), { recursive: true });
+  await mkdir(path.join(root, 'docs/showcase'), { recursive: true });
+  await copyFile(threeSrc, path.join(root, 'public/showcase/three.module.js'));
+  await copyFile(threeSrc, path.join(root, 'docs/showcase/three.module.js'));
+  try {
+    await access(threeCoreSrc);
+    await copyFile(threeCoreSrc, path.join(root, 'public/showcase/three.core.js'));
+    await copyFile(threeCoreSrc, path.join(root, 'docs/showcase/three.core.js'));
+  } catch {}
+} catch { /* Three.js module copy optional if not installed yet */ }
 try {
   await access(model);
   console.log('MediaPipe model already installed. Offline assets ready.');

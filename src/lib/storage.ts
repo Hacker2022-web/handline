@@ -13,7 +13,7 @@ export async function loadGestures(): Promise<Gesture[]> {
     if (!existing) {
       await tx.store.put(preset);
     } else if (existing.source === 'preset' && (existing.mediaPipeCategory !== preset.mediaPipeCategory || existing.name !== preset.name)) {
-      await tx.store.put({ ...existing, name: preset.name, phrase: existing.phrase || preset.phrase, mediaPipeCategory: preset.mediaPipeCategory });
+      await tx.store.put({ ...existing, name: preset.name, phrase: preset.phrase, mediaPipeCategory: preset.mediaPipeCategory, enabled: preset.enabled });
     }
   }
   await tx.done;

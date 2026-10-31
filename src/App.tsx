@@ -1,5 +1,7 @@
+import { HandheldBar } from './components/HandheldBar';
+import './handheld.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, ArrowUpRight, ArrowUUpLeft, BookOpen, Camera, Check, Cloud, Desktop, Flask, Hand, Plus, SlidersHorizontal, SpeakerHigh, SpeakerSlash, Waveform, X, Info } from '@phosphor-icons/react';
+import { ArrowRight, ArrowUpRight, ArrowUUpLeft, BookOpen, Camera, Check, Cloud, Cube, Desktop, Flask, Hand, Plus, SlidersHorizontal, SpeakerHigh, SpeakerSlash, Waveform, X, Info } from '@phosphor-icons/react';
 import { VoiceSettings } from './components/VoiceSettings';
 import { ConversationTools } from './components/ConversationTools';
 import { CameraPanel } from './components/CameraPanel';
@@ -26,6 +28,7 @@ const NAV = [
 ];
 
 export default function App() {
+  const [handheld, setHandheld] = useState(() => new URLSearchParams(location.search).get('device') === 'handheld');
   const [page, setPage] = useState<Page>('communicate');
   const [gestures, setGestures] = useState<Gesture[]>([]);
   const [settings, setSettings] = useState<Settings>(()=>{try{const theme=localStorage.getItem('handline-theme');return {...DEFAULT_SETTINGS,theme:theme==='dark'||theme==='light'?theme:'system'};}catch{return DEFAULT_SETTINGS;}});
@@ -141,16 +144,17 @@ export default function App() {
   const modelReady = local ? runtimeStatus?.local.ready : runtimeStatus?.cloud.configured && consent;
   const enabled = gestures.filter(g => g.enabled);
 
-  return <div className="app-shell">
+  return <div className={`app-shell ${handheld ? 'handheld-mode' : ''}`}>
+    <HandheldBar enabled={handheld} onToggle={()=>{recognition.reset();setHandheld(v=>!v);}} onPage={navigate} runtime={settings.runtime} onRuntime={runtime=>updateSettings({...settings,runtime})}/>
     <a className="skip-link" href="#main-content">Skip to content</a>
     <aside className="sidebar">
       <button className="brand" onClick={() => navigate('communicate')} aria-label="Handline home"><img src="/handline.svg" alt="" /><span>handline<span className="brand-period">.</span></span></button>
       <div className="sidebar-caption">YOUR PERSONAL COMMUNICATOR</div>
       <nav aria-label="Main navigation">{NAV.map(({ id, label, icon: Icon }) => <button key={id} aria-label={label} className={page === id ? 'nav-active' : ''} aria-current={page === id ? 'page' : undefined} onClick={() => navigate(id)}><Icon size={21} weight={page === id ? 'fill' : 'regular'} /><span>{label}</span>{id === 'library' && <span className="nav-count">{gestures.length}</span>}</button>)}</nav>
-      <div className="sidebar-bottom"><div className="sidebar-note"><Hand size={25} weight="thin" /><p>Made for your gestures.<br /><strong>And your way of saying things.</strong></p></div><button aria-label="Runtime status and setup" className="sidebar-runtime" onClick={() => navigate('setup')}><span className="sidebar-runtime-icon">{local ? <Desktop size={20} /> : <Cloud size={20} />}</span><span><strong>{local ? 'Local runtime' : 'Cloud runtime'}</strong><small><span className={`status-dot ${modelReady ? '' : 'dot-muted'}`} />{modelReady ? 'Ready for custom gestures' : 'View model setup'}</small></span><ArrowUpRight size={16} /></button><span className="prototype-label">AIDN · HACK DAY PROTOTYPE</span></div>
+      <div className="sidebar-bottom"><div className="sidebar-note"><Hand size={25} weight="thin" /><p>Made for your gestures.<br /><strong>And your way of saying things.</strong></p></div><button aria-label="Runtime status and setup" className="sidebar-runtime" onClick={() => navigate('setup')}><span className="sidebar-runtime-icon">{local ? <Desktop size={20} /> : <Cloud size={20} />}</span><span><strong>{local ? 'Local runtime' : 'Cloud runtime'}</strong><small><span className={`status-dot ${modelReady ? '' : 'dot-muted'}`} />{modelReady ? 'Ready for custom gestures' : 'View model setup'}</small></span><ArrowUpRight size={16} /></button></div>
     </aside>
     <div className="app-main">
-      <header className="topbar"><div className="breadcrumb">Your space<span>/</span><strong>{NAV.find(n => n.id === page)?.label}</strong></div><div className="topbar-actions">{camera.status === 'ready' && <button className="camera-on-button" onClick={camera.stop} title="Turn off camera"><span className="status-dot" />Camera on<Camera size={16} /></button>}<div className="mode-switch" aria-label="Recognition runtime"><button aria-pressed={local} onClick={() => updateSettings({ ...settings, runtime: 'local' })} disabled={trialCount !== null}><Desktop size={16} />Offline</button><button aria-pressed={!local} onClick={() => updateSettings({ ...settings, runtime: 'cloud' })} disabled={trialCount !== null}><Cloud size={17} />Online</button></div><button className="icon-button" aria-label={`Theme: ${settings.theme}. Change theme`} onClick={()=>updateSettings({...settings,theme:settings.theme==='system'?'light':settings.theme==='light'?'dark':'system'})}>{settings.theme==='dark'?'Dark':settings.theme==='light'?'Light':'Auto'}</button><button className="help-button" aria-label="How Handline works" onClick={() => setHelp(true)}><Info size={21} /></button></div></header>
+      <header className="topbar"><div className="breadcrumb">Your space<span>/</span><strong>{NAV.find(n => n.id === page)?.label}</strong></div><div className="topbar-actions"><a href="/showcase/" target="_blank" rel="noreferrer" className="text-button" title="Open interactive 3D hand and landmark showcase" style={{ fontSize: '11px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Cube size={16} />3D View<ArrowUpRight size={13} /></a>{camera.status === 'ready' && <button className="camera-on-button" onClick={camera.stop} title="Turn off camera"><span className="status-dot" />Camera on<Camera size={16} /></button>}<div className="mode-switch" aria-label="Recognition runtime"><button aria-pressed={local} onClick={() => updateSettings({ ...settings, runtime: 'local' })} disabled={trialCount !== null}><Desktop size={16} />Offline</button><button aria-pressed={!local} onClick={() => updateSettings({ ...settings, runtime: 'cloud' })} disabled={trialCount !== null}><Cloud size={17} />Online</button></div><button className="icon-button" aria-label={`Theme: ${settings.theme}. Change theme`} onClick={()=>updateSettings({...settings,theme:settings.theme==='system'?'light':settings.theme==='light'?'dark':'system'})}>{settings.theme==='dark'?'Dark':settings.theme==='light'?'Light':'Auto'}</button><button className="help-button" aria-label="How Handline works" onClick={() => setHelp(true)}><Info size={21} /></button></div></header>
       <main id="main-content" tabIndex={-1}>
         {storageError && <div className="notice mb-5" role="alert">{storageError}</div>}
         {!loaded && !storageError && <div className="loading-state" role="status"><div /><div /><span>Opening your vocabulary…</span></div>}
