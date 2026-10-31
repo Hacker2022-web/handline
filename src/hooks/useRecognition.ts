@@ -36,7 +36,7 @@ export function useRecognition(options: {
     const normalized = vector(frame);
     const threshold = Math.max(50,current.settings.minConfidence ?? 50);
     const candidates = rankCandidates(normalized, current.gestures, 0.32);
-    const preset = frame.hands === 1 ? current.gestures.find(g => g.enabled && g.source === 'preset' && g.mediaPipeCategory === frame.category) : undefined;
+    const preset = (frame.hands === 1 || frame.hands === 2) ? current.gestures.find(g => g.enabled && g.source === 'preset' && (g.mediaPipeCategory === frame.category || (frame.category === 'Stop_Hand' && g.mediaPipeCategory === 'Open_Palm') || (frame.category === 'Open_Palm' && g.mediaPipeCategory === 'Stop_Hand'))) : undefined;
     const custom = candidates.length && !isAmbiguous(candidates) ? candidates[0].gesture : undefined;
     // Explicitly enrolled custom poses take precedence over editable starter mappings.
     // Conflicting custom matches must not accidentally fall through to a preset phrase.

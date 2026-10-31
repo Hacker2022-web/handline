@@ -7,11 +7,18 @@ const database = openDB('handline-v1', 1, {
 export async function loadGestures(): Promise<Gesture[]> {
   const db = await database;
   const saved = await db.getAll('gestures') as Gesture[];
-  const missing = PRESETS.filter(p => !saved.some(g => g.id === p.id));
   const tx = db.transaction('gestures', 'readwrite');
-  for (const gesture of missing) await tx.store.put(gesture);
+  for (const preset of PRESETS) {
+    const existing = saved.find(g => g.id === preset.id);
+    if (!existing) {
+      await tx.store.put(preset);
+    } else if (existing.source === 'preset' && (existing.mediaPipeCategory !== preset.mediaPipeCategory || existing.name !== preset.name)) {
+      await tx.store.put({ ...existing, name: preset.name, phrase: existing.phrase || preset.phrase, mediaPipeCategory: preset.mediaPipeCategory });
+    }
+  }
   await tx.done;
-  return [...saved, ...missing].sort((a, b) => (a.source === b.source ? 0 : a.source === 'preset' ? -1 : 1));
+  const all = await (await database).getAll('gestures') as Gesture[];
+  return all.sort((a, b) => (a.source === b.source ? 0 : a.source === 'preset' ? -1 : 1));
 }
 export async function saveGesture(gesture: Gesture) { await (await database).put('gestures', gesture); }
 export async function deleteGesture(id: string) { await (await database).delete('gestures', id); }

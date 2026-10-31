@@ -6,6 +6,46 @@ import { normalizeLandmarks, normalizeDualHandLandmarks } from '../lib/matching'
 export type Observation = { landmarks: Landmark[]; allHands?: { landmarks: Landmark[]; handedness: string }[]; category: string | null; score: number; hands: number; at: number };
 const CONNECTIONS = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[0,17],[17,18],[18,19],[19,20]];
 
+function classifyHandPose(points: Landmark[] | undefined, defaultCat: string | null, defaultScore: number) {
+  if (!points || points.length < 21) return { category: defaultCat, score: defaultScore };
+  const d = (i: number, j: number) => Math.hypot(points[i].x - points[j].x, points[i].y - points[j].y, (points[i].z - points[j].z) * 0.4);
+  const scale = d(0, 9);
+  if (scale < 0.02) return { category: defaultCat, score: defaultScore };
+
+  // 1. OK Sign (Thumb tip 4 touches Index tip 8; middle 12, ring 16, pinky 20 extended)
+  const thumbIndexDist = d(4, 8) / scale;
+  const middleExt = d(12, 0) > d(10, 0);
+  const ringExt = d(16, 0) > d(14, 0);
+  const pinkyExt = d(20, 0) > d(18, 0);
+  if (thumbIndexDist < 0.42 && middleExt && ringExt && pinkyExt) {
+    return { category: 'OK_Sign', score: 0.92 };
+  }
+
+  // 2. Shaka Sign (Thumb 4 extended, Pinky 20 extended; Index 8, Middle 12, Ring 16 curled)
+  const thumbExt = d(4, 0) > d(2, 0) * 1.15;
+  const indexCurled = d(8, 0) < d(6, 0) * 1.1;
+  const middleCurled = d(12, 0) < d(10, 0) * 1.1;
+  const ringCurled = d(16, 0) < d(14, 0) * 1.1;
+  if (thumbExt && pinkyExt && indexCurled && middleCurled && ringCurled) {
+    return { category: 'Shaka', score: 0.92 };
+  }
+
+  // 3. Crossed Fingers (Index 8 and Middle 12 extended and crossing/close; Ring 16 and Pinky 20 curled)
+  const indexExt = d(8, 0) > d(6, 0);
+  const indexMidDist = d(8, 12) / scale;
+  if (indexExt && middleExt && ringCurled && !pinkyExt && indexMidDist < 0.35) {
+    return { category: 'Crossed_Fingers', score: 0.90 };
+  }
+
+  // 4. Stop Hand (Open palm facing forward with upright fingers)
+  if (defaultCat === 'Open_Palm') {
+    const isUpright = points[12].y < points[0].y && Math.abs(points[12].x - points[0].x) < scale * 0.45;
+    if (isUpright) return { category: 'Stop_Hand', score: defaultScore };
+  }
+
+  return { category: defaultCat, score: defaultScore };
+}
+
 export function useCamera(onFrame: (frame: Observation) => void) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -69,9 +109,44 @@ export function useCamera(onFrame: (frame: Observation) => void) {
           previous = video.currentTime; processed = now;
           try {
             const result: GestureRecognizerResult = recognizer!.recognizeForVideo(video, now);
+            const numHands = result.landmarks.length;
+            const rawCat0 = result.gestures[0]?.[0]?.categoryName ?? null;
+            const rawScore0 = result.gestures[0]?.[0]?.score ?? 0;
+            const rawCat1 = result.gestures[1]?.[0]?.categoryName ?? null;
+            const rawScore1 = result.gestures[1]?.[0]?.score ?? 0;
+
+            const hand0 = classifyHandPose(result.landmarks[0], rawCat0, rawScore0);
+            const hand1 = classifyHandPose(result.landmarks[1], rawCat1, rawScore1);
+
+            let category = hand0.category;
+            let score = hand0.score;
+
+            if (numHands === 2 && hand0.category && hand1.category) {
+              if (hand0.category === 'Thumb_Up' && hand1.category === 'Thumb_Up') {
+                category = 'Two_Thumbs_Up';
+                score = Math.min(hand0.score, hand1.score);
+              } else if ((hand0.category === 'Open_Palm' || hand0.category === 'Stop_Hand') && (hand1.category === 'Open_Palm' || hand1.category === 'Stop_Hand')) {
+                const wrist0 = result.landmarks[0][0];
+                const wrist1 = result.landmarks[1][0];
+                const dist = Math.hypot(wrist0.x - wrist1.x, wrist0.y - wrist1.y);
+                category = dist < 0.28 ? 'Hands_Praying' : 'Two_Open_Palms';
+                score = Math.min(hand0.score, hand1.score);
+              } else if (hand0.category === 'Victory' && hand1.category === 'Victory') {
+                category = 'Two_Victory';
+                score = Math.min(hand0.score, hand1.score);
+              } else if (hand0.category === 'Closed_Fist' && hand1.category === 'Closed_Fist') {
+                category = 'Two_Fists';
+                score = Math.min(hand0.score, hand1.score);
+              }
+            }
+
             const observation: Observation = {
-              allHands: result.landmarks.map((landmarks,i)=>({landmarks,handedness:result.handedness[i]?.[0]?.categoryName ?? 'Unknown'})).sort((a,b)=>a.handedness.localeCompare(b.handedness) || a.landmarks[0].x-b.landmarks[0].x), landmarks: result.landmarks[0] ?? [], category: result.gestures[0]?.[0]?.categoryName ?? null,
-              score: result.gestures[0]?.[0]?.score ?? 0, hands: result.landmarks.length, at: now,
+              allHands: result.landmarks.map((landmarks,i)=>({landmarks,handedness:result.handedness[i]?.[0]?.categoryName ?? 'Unknown'})).sort((a,b)=>a.handedness.localeCompare(b.handedness) || a.landmarks[0].x-b.landmarks[0].x),
+              landmarks: result.landmarks[0] ?? [],
+              category,
+              score,
+              hands: numHands,
+              at: now,
             };
             observationRef.current = observation;
             setHandCount(observation.hands);
