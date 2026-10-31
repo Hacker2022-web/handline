@@ -1,14 +1,1 @@
-node_modules/
-dist/
-.env
-.env.local
-.env.*
-!.env.example
-playwright-report/
-test-results/
-*.log
-.DS_Store
-public/models/*.task
-public/mediapipe/*
-
-.venv-headroom/
+node_modules

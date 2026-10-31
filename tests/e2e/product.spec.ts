@@ -19,9 +19,7 @@ async function prepare(page: Page) {
       const ctx = canvas.getContext('2d')!;
       const paint = () => {
         ctx.fillStyle = '#d9ded3'; ctx.fillRect(0, 0, 640, 480);
-        if (state.pose === 'dual') {
-          ctx.drawImage(img,0,45,300,390);ctx.save();ctx.translate(640,0);ctx.scale(-1,1);ctx.drawImage(img,0,45,300,390);ctx.restore();
-        } else if (state.pose !== 'blank') {
+        if (state.pose !== 'blank') {
           const source = state.pose === 'unknown' ? unknown : img;
           const scale = Math.min(640 / source.width, 480 / source.height);
           ctx.drawImage(source, (640 - source.width * scale) / 2, (480 - source.height * scale) / 2, source.width * scale, source.height * scale);
@@ -185,27 +183,4 @@ test('live local Gemma verifies an enrolled custom pose through the real app end
   await expect.poll(async () => (await speechCalls(page)).length).toBe(1);
   expect(await speechCalls(page)).toEqual(['Water, please.']);
   expect(remoteRequests).toEqual([]);
-});
-
-test('theme and confidence preferences persist without changing gestures', async ({page})=>{
- await prepare(page); await page.getByRole('button',{name:'Runtime & setup',exact:true}).click();
- await page.getByLabel('Appearance',{exact:true}).selectOption('dark');
- await expect(page.locator('html')).toHaveClass(/dark/);
- const slider=page.getByLabel(/Minimum match confidence to speak/);await slider.fill('70');
- // Wait for preferences transaction completion by observing the next loaded state.
- await page.getByRole('button',{name:'Communicate',exact:true}).click();await page.waitForTimeout(150);await page.reload();
- await expect(page.locator('html')).toHaveClass(/dark/);
- await page.getByRole('button',{name:'Runtime & setup',exact:true}).click();await expect(page.getByLabel(/Minimum match confidence to speak/)).toHaveValue('70');
- await page.getByLabel('Appearance',{exact:true}).selectOption('light');await expect(page.locator('html')).not.toHaveClass(/dark/);
-});
-
-
-test('two-hand pose can be enrolled with real MediaPipe tracking', async ({page})=>{
- await prepare(page);await pose(page,'dual');await page.getByRole('button',{name:'Add a gesture',exact:true}).click();const dialog=page.getByRole('dialog');
- await dialog.getByLabel('Gesture name').fill('Both hands together');await dialog.getByLabel('Exact phrase').fill('Please come here.');
- await dialog.getByLabel('Hands in this gesture').selectOption('dual');await dialog.getByRole('button',{name:'Start camera',exact:true}).click();
- await expect(dialog.getByText('Two hands detected',{exact:true})).toBeVisible({timeout:30000});
- for(let i=1;i<=8;i++)await dialog.getByRole('button',{name:`Capture sample ${i}`,exact:true}).click();
- await dialog.getByRole('button',{name:'Save gesture',exact:true}).click();await expect(dialog).not.toBeVisible();
- await page.reload();await expect(page.getByRole('button',{name:'Please come here. Both hands together',exact:true})).toBeVisible();
 });

@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, ArrowUpRight, ArrowUUpLeft, BookOpen, Camera, Check, Cloud, Desktop, Flask, Hand, Plus, SlidersHorizontal, SpeakerHigh, SpeakerSlash, Waveform, X, Info } from '@phosphor-icons/react';
-import { VoiceSettings } from './components/VoiceSettings';
-import { ConversationTools } from './components/ConversationTools';
 import { CameraPanel } from './components/CameraPanel';
 import { Enrollment } from './components/Enrollment';
 import { GestureIcon } from './components/GestureIcon';
@@ -28,14 +26,8 @@ const NAV = [
 export default function App() {
   const [page, setPage] = useState<Page>('communicate');
   const [gestures, setGestures] = useState<Gesture[]>([]);
-  const [settings, setSettings] = useState<Settings>(()=>{try{const theme=localStorage.getItem('handline-theme');return {...DEFAULT_SETTINGS,theme:theme==='dark'||theme==='light'?theme:'system'};}catch{return DEFAULT_SETTINGS;}});
-  useEffect(()=>{
-    const media=matchMedia('(prefers-color-scheme: dark)');
-    const apply=()=>document.documentElement.classList.toggle('dark',settings.theme==='dark'||settings.theme==='system'&&media.matches);
-    apply();try {localStorage.setItem('handline-theme',settings.theme);} catch {} media.addEventListener('change',apply);return()=>media.removeEventListener('change',apply);
-  },[settings.theme]);
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [trials, setTrials] = useState<Trial[]>([]);
-  const [attention, setAttention] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [storageError, setStorageError] = useState('');
@@ -75,8 +67,6 @@ export default function App() {
   const say = useCallback((gesture: Gesture, source: Message['source']) => {
     setMessages(previous => [{ id: crypto.randomUUID(), gestureId: gesture.id, phrase: gesture.phrase, at: Date.now(), source, runtime: settings.runtime }, ...previous].slice(0, 30));
     if (settings.autoSpeak) speech.speak(gesture.phrase);
-    if (source === 'gesture') speech.confirm();
-    if (source === 'gesture' && gesture.priority && gesture.handMode === 'dual') setAttention(true);
     if (source === 'gesture' && trialRef.current) {
       trialRef.current.observations.push({ id: gesture.id, name: gesture.name });
       setTrialCount(trialRef.current.observations.length);
@@ -150,7 +140,7 @@ export default function App() {
       <div className="sidebar-bottom"><div className="sidebar-note"><Hand size={25} weight="thin" /><p>Made for your gestures.<br /><strong>And your way of saying things.</strong></p></div><button aria-label="Runtime status and setup" className="sidebar-runtime" onClick={() => navigate('setup')}><span className="sidebar-runtime-icon">{local ? <Desktop size={20} /> : <Cloud size={20} />}</span><span><strong>{local ? 'Local runtime' : 'Cloud runtime'}</strong><small><span className={`status-dot ${modelReady ? '' : 'dot-muted'}`} />{modelReady ? 'Ready for custom gestures' : 'View model setup'}</small></span><ArrowUpRight size={16} /></button><span className="prototype-label">AIDN · HACK DAY PROTOTYPE</span></div>
     </aside>
     <div className="app-main">
-      <header className="topbar"><div className="breadcrumb">Your space<span>/</span><strong>{NAV.find(n => n.id === page)?.label}</strong></div><div className="topbar-actions">{camera.status === 'ready' && <button className="camera-on-button" onClick={camera.stop} title="Turn off camera"><span className="status-dot" />Camera on<Camera size={16} /></button>}<div className="mode-switch" aria-label="Recognition runtime"><button aria-pressed={local} onClick={() => updateSettings({ ...settings, runtime: 'local' })} disabled={trialCount !== null}><Desktop size={16} />Offline</button><button aria-pressed={!local} onClick={() => updateSettings({ ...settings, runtime: 'cloud' })} disabled={trialCount !== null}><Cloud size={17} />Online</button></div><button className="icon-button" aria-label={`Theme: ${settings.theme}. Change theme`} onClick={()=>updateSettings({...settings,theme:settings.theme==='system'?'light':settings.theme==='light'?'dark':'system'})}>{settings.theme==='dark'?'Dark':settings.theme==='light'?'Light':'Auto'}</button><button className="help-button" aria-label="How Handline works" onClick={() => setHelp(true)}><Info size={21} /></button></div></header>
+      <header className="topbar"><div className="breadcrumb">Your space<span>/</span><strong>{NAV.find(n => n.id === page)?.label}</strong></div><div className="topbar-actions">{camera.status === 'ready' && <button className="camera-on-button" onClick={camera.stop} title="Turn off camera"><span className="status-dot" />Camera on<Camera size={16} /></button>}<div className="mode-switch" aria-label="Recognition runtime"><button aria-pressed={local} onClick={() => updateSettings({ ...settings, runtime: 'local' })} disabled={trialCount !== null}><Desktop size={16} />Offline</button><button aria-pressed={!local} onClick={() => updateSettings({ ...settings, runtime: 'cloud' })} disabled={trialCount !== null}><Cloud size={17} />Online</button></div><button className="help-button" aria-label="How Handline works" onClick={() => setHelp(true)}><Info size={21} /></button></div></header>
       <main id="main-content" tabIndex={-1}>
         {storageError && <div className="notice mb-5" role="alert">{storageError}</div>}
         {!loaded && !storageError && <div className="loading-state" role="status"><div /><div /><span>Opening your vocabulary…</span></div>}
@@ -169,18 +159,15 @@ export default function App() {
           </div>
           {settings.runtime === 'cloud' && !consent && <div className="inline-runtime-note"><Cloud size={19} /><p>Cloud custom gestures need image permission. Presets and phrase buttons are ready.</p><button className="text-button" onClick={() => navigate('setup')}>Review setup<ArrowRight size={16} /></button></div>}
           <section className="quick-phrases" aria-labelledby="quick-phrases-title"><div className="section-label"><div><h2 id="quick-phrases-title">A few words, always within reach.</h2><p>Tap a phrase at any time. Your camera can stay off.</p></div><button className="text-button" onClick={() => navigate('library')}>Your library<span className="count-pill">{gestures.length}</span><ArrowRight size={17} /></button></div><div className="phrase-grid">{enabled.map(gesture => <button key={gesture.id} className={`phrase-button ${currentMessage?.gestureId === gesture.id ? 'phrase-selected' : ''}`} onClick={() => say(gesture, 'manual')}><span className="gesture-icon"><GestureIcon gesture={gesture} /></span><span><strong>{gesture.phrase}</strong><small>{gesture.name}</small></span><ArrowUpRight size={18} /></button>)}{!enabled.length && loaded && <p className="muted">All gestures are disabled. Enable or add one in your library.</p>}</div></section>
-          <ConversationTools gestures={gestures} settings={settings} recognized={currentMessage} onSpeak={speech.speak}/>
           <div className="workspace-bottom"><div className="how-it-works"><span className="step-number">01</span><span>Show one hand</span><span className="step-line" /><span className="step-number">02</span><span>Hold your gesture</span><span className="step-line" /><span className="step-number">03</span><span>Let your words speak</span></div><button className="text-button" onClick={() => setHelp(true)}>How it works<ArrowUpRight size={16} /></button></div>
           {messages.length > 1 && <section className="recent-messages"><div className="section-label"><h2>Earlier in this conversation</h2><button className="text-button" onClick={() => { speech.cancel(); setMessages([]); }}>Clear conversation</button></div>{messages.slice(1, 5).map(message => <button key={message.id} className="recent-message" onClick={() => speech.speak(message.phrase)}><span>{message.phrase}</span><time>{new Date(message.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time><SpeakerHigh size={18} /></button>)}</section>}
         </div>
         {page === 'library' && <Library gestures={gestures} onAdd={() => editGesture()} onEdit={editGesture} onDelete={setDeleteTarget} onToggle={g => { void upsertGesture({ ...g, enabled: !g.enabled }).catch(() => setStorageError('Could not save the gesture. Please try again.')); }} onSay={g => { say(g, 'manual'); setPage('communicate'); }} />}
         {page === 'practice' && <Practice gestures={gestures} trials={trials} onStart={startTrial} onClear={() => setClearLog(true)} />}
-        {page === 'setup' && <VoiceSettings settings={settings} onSettings={updateSettings}/> }
         {page === 'setup' && <Setup settings={settings} status={runtimeStatus} statusError={statusError} consent={consent} voices={speech.voices} onSettings={updateSettings} onConsent={v => { recognition.reset(); setConsent(v); }} onRefresh={refreshStatus} onSpeak={() => speech.speak('Your gestures. Your words.')} />}
       </main>
       <footer className="app-footer"><span>Made for a more personal kind of communication.</span><span><span className="status-dot" />{loaded ? 'Vocabulary saved on this device' : storageError ? 'Local storage unavailable' : 'Opening local vocabulary…'}</span></footer>
     </div>
-    {attention && <Dialog title="Attention requested" onClose={()=>setAttention(false)}><div role="alert" className="attention-alert">{currentMessage?.phrase ?? 'Please come and help me.'}</div><p className="dialog-intro">Local attention alert. No emergency service or remote contact was notified.</p><button className="button button-primary" onClick={()=>setAttention(false)}>Dismiss alert</button></Dialog>}
     {enrollment && <Enrollment gesture={enrollment.gesture} gestures={gestures} camera={camera} onSave={upsertGesture} onClose={() => setEnrollment(null)} />}
     {deleteTarget && <Dialog title={`Delete ${deleteTarget.name}?`} onClose={() => setDeleteTarget(null)}><p className="dialog-intro">This removes the gesture, its phrase, and its recorded hand examples from this device.</p><div className="dialog-footer"><button className="button button-secondary" onClick={() => setDeleteTarget(null)}>Keep gesture</button><button className="button button-danger" onClick={() => void removeGesture()}>Delete gesture</button></div></Dialog>}
     {clearLog && <Dialog title="Clear your practice log?" onClose={() => setClearLog(false)}><p className="dialog-intro">Export your results first if you want to keep them. Your gestures will remain available.</p><div className="dialog-footer"><button className="button button-secondary" onClick={() => setClearLog(false)}>Keep results</button><button className="button button-danger" onClick={async () => { try { await store.clearTrials(); setTrials([]); setClearLog(false); } catch { setStorageError('Could not clear the log. Please try again.'); } }}>Clear log</button></div></Dialog>}

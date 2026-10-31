@@ -9,14 +9,14 @@ export function CameraPanel({ camera, recognition, paused, onPause, onSetup }: {
   const live = camera.status === 'ready';
   const label = live ? paused ? 'Recognition paused' : recognition.state.label : camera.status === 'loading' ? 'Preparing your camera' : 'Camera is off';
   return <section className="camera-panel" aria-label="Camera and gesture recognition">
-    <div className="camera-panel-top"><span><span className={`status-dot ${live && !paused ? '' : 'dot-muted'}`} />{live ? 'LIVE CAMERA' : 'CAMERA PREVIEW'}</span><span className="camera-local-label">PROCESSED ON DEVICE</span>{live && !paused && <span className={`match-badge score-${recognition.score < 50 ? 'low' : recognition.score <=75 ? 'medium' : 'high'}`} aria-label="Match score">{recognition.score}% MATCH</span>}</div>
+    <div className="camera-panel-top"><span><span className={`status-dot ${live && !paused ? '' : 'dot-muted'}`} />{live ? 'LIVE CAMERA' : 'CAMERA PREVIEW'}</span><span className="camera-local-label">PROCESSED ON DEVICE</span></div>
     <div className="camera-view">
       <video ref={camera.videoRef} muted playsInline className="camera-video mirror" aria-label="Live webcam preview" />
       <canvas ref={camera.canvasRef} className="camera-landmarks mirror" aria-hidden="true" />
       {!live && <div className="camera-empty">
         <div className="hand-illustration" aria-hidden="true"><div className="hand-orbit orbit-one" /><div className="hand-orbit orbit-two" /><Hand size={92} weight="thin" /><span className="frame-corner top-left" /><span className="frame-corner top-right" /><span className="frame-corner bottom-left" /><span className="frame-corner bottom-right" /></div>
         <h2>{camera.status === 'loading' ? 'Getting ready to listen' : 'A little gesture. Your words.'}</h2>
-        <p>{camera.status === 'loading' ? 'Loading local hand tracking. This may take a moment.' : 'Turn on your camera and bring one hand into view.'}</p>
+        <p>{camera.status === 'loading' ? 'Loading local hand tracking. This may take a moment.' : 'Turn on your camera and bring one or two hands into view.'}</p>
         <button className="button button-light" disabled={camera.status === 'loading'} onClick={() => void camera.start()}><Camera size={20} />{camera.status === 'loading' ? 'Starting camera…' : camera.status === 'error' ? 'Try camera again' : 'Start camera'}<ArrowUpRight size={17} /></button>
         <span className="camera-footnote">Camera access starts only when you choose.</span>
       </div>}
@@ -26,7 +26,6 @@ export function CameraPanel({ camera, recognition, paused, onPause, onSetup }: {
     <div className="recognition-bar"><div className="recognition-copy"><div className="recognition-symbol"><Hand size={22} /></div><div><strong aria-live="polite">{label}</strong><p>{live ? paused ? 'Your camera stays on. No gestures will trigger.' : recognition.state.detail : 'Your camera feed stays on this device.'}</p></div></div>
       {live ? <div className="flex gap-2"><button className="icon-button dark" aria-label={paused ? 'Resume recognition' : 'Pause recognition'} onClick={onPause}>{paused ? <Play size={20} /> : <Pause size={20} />}</button><button className="icon-button dark" aria-label="Turn off camera" onClick={camera.stop}><Power size={20} /></button></div> : <button className="icon-button dark" aria-label="View camera and model setup" onClick={onSetup}><ArrowUpRight size={21} /></button>}
     </div>
-    <details className="reasoner-drawer" onToggle={e=>recognition.setInspect(e.currentTarget.open)}><summary>Visual Reasoner</summary><p className="field-help">Enable before a custom pose to inspect the next comparison. The score is landmark similarity, not a calibrated probability.</p>{recognition.inspection ? <><a href={recognition.inspection.contactSheet} target="_blank" rel="noreferrer"><img src={recognition.inspection.contactSheet} alt="Exact live and reference comparison sheet inspected by Gemma" /></a><p>{recognition.inspection.reasoning}</p><small>{(recognition.inspection.latencyMs/1000).toFixed(2)} s · model-generated visual explanation</small></> : <p>No inspected custom gesture yet.</p>}</details>
     <div className="hold-track" role="progressbar" aria-label="Gesture stability" aria-valuemin={0} aria-valuemax={100} aria-valuenow={live && !paused ? Math.round(recognition.state.progress * 100) : 0}><div style={{ transform: `scaleX(${live && !paused ? recognition.state.progress : 0})` }} /></div>
   </section>;
 }

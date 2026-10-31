@@ -60,12 +60,3 @@ describe('Recognition lifecycle', () => {
     expect(config.onRecognized).not.toHaveBeenCalled();
   });
 });
-
-describe('Configurable preset threshold',()=>{
- it('shows low scores, rejects 49%, and triggers at the requested 50% boundary',()=>{
-  const config={...options(),gestures:PRESETS,settings:{...DEFAULT_SETTINGS,minConfidence:50}};
-  const {result}=renderHook(()=>useRecognition(config));
-  act(()=>result.current.onFrame({...frame(),category:'Thumb_Up',score:.49}));now=1000;act(()=>result.current.onFrame({...frame(),category:'Thumb_Up',score:.49}));expect(config.onRecognized).not.toHaveBeenCalled();expect(result.current.score).toBe(49);
-  now=1100;act(()=>result.current.onFrame({...frame(),category:'Thumb_Up',score:.5}));now=2100;act(()=>result.current.onFrame({...frame(),category:'Thumb_Up',score:.5}));expect(config.onRecognized).toHaveBeenCalledWith(PRESETS[0]);
- });
-});

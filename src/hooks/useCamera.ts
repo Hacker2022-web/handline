@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GestureRecognizer, GestureRecognizerResult } from '@mediapipe/tasks-vision';
 import type { GestureSample, Landmark } from '../lib/types';
-import { normalizeLandmarks, normalizeDualHandLandmarks } from '../lib/matching';
+import { normalizeLandmarks } from '../lib/matching';
 
-export type Observation = { landmarks: Landmark[]; allHands?: { landmarks: Landmark[]; handedness: string }[]; category: string | null; score: number; hands: number; at: number };
+export type Observation = { landmarks: Landmark[]; category: string | null; score: number; hands: number; at: number };
 const CONNECTIONS = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[0,17],[17,18],[18,19],[19,20]];
 
 export function useCamera(onFrame: (frame: Observation) => void) {
@@ -69,9 +69,40 @@ export function useCamera(onFrame: (frame: Observation) => void) {
           previous = video.currentTime; processed = now;
           try {
             const result: GestureRecognizerResult = recognizer!.recognizeForVideo(video, now);
+            const numHands = result.landmarks.length;
+            const allLandmarks = result.landmarks.flat();
+            const cat0 = result.gestures[0]?.[0]?.categoryName ?? null;
+            const score0 = result.gestures[0]?.[0]?.score ?? 0;
+            const cat1 = result.gestures[1]?.[0]?.categoryName ?? null;
+            const score1 = result.gestures[1]?.[0]?.score ?? 0;
+            let category = cat0;
+            let score = score0;
+
+            if (numHands === 2 && cat0 && cat1 && score0 >= 0.55 && score1 >= 0.55) {
+              if (cat0 === 'Thumb_Up' && cat1 === 'Thumb_Up') {
+                category = 'Two_Thumbs_Up';
+                score = Math.min(score0, score1);
+              } else if (cat0 === 'Open_Palm' && cat1 === 'Open_Palm') {
+                const wrist0 = result.landmarks[0][0];
+                const wrist1 = result.landmarks[1][0];
+                const dist = Math.hypot(wrist0.x - wrist1.x, wrist0.y - wrist1.y);
+                category = dist < 0.28 ? 'Hands_Praying' : 'Two_Open_Palms';
+                score = Math.min(score0, score1);
+              } else if (cat0 === 'Victory' && cat1 === 'Victory') {
+                category = 'Two_Victory';
+                score = Math.min(score0, score1);
+              } else if (cat0 === 'Closed_Fist' && cat1 === 'Closed_Fist') {
+                category = 'Two_Fists';
+                score = Math.min(score0, score1);
+              }
+            }
+
             const observation: Observation = {
-              allHands: result.landmarks.map((landmarks,i)=>({landmarks,handedness:result.handedness[i]?.[0]?.categoryName ?? 'Unknown'})).sort((a,b)=>a.handedness.localeCompare(b.handedness) || a.landmarks[0].x-b.landmarks[0].x), landmarks: result.landmarks[0] ?? [], category: result.gestures[0]?.[0]?.categoryName ?? null,
-              score: result.gestures[0]?.[0]?.score ?? 0, hands: result.landmarks.length, at: now,
+              landmarks: allLandmarks,
+              category,
+              score,
+              hands: numHands,
+              at: now,
             };
             observationRef.current = observation;
             setHandCount(observation.hands);
@@ -109,15 +140,14 @@ export function useCamera(onFrame: (frame: Observation) => void) {
     }
   }, [stop]);
 
-  const capture = useCallback((handMode: 'single' | 'dual' = 'single'): GestureSample | null => {
+  const capture = useCallback((): GestureSample | null => {
     const video = videoRef.current;
     const frame = observationRef.current;
-    if (!video || !frame || frame.hands !== (handMode === 'dual' ? 2 : 1) || performance.now() - frame.at > 400) return null;
-    const landmarks = handMode === 'dual' && frame.allHands?.length === 2 ? normalizeDualHandLandmarks(frame.allHands[0].landmarks, frame.allHands[1].landmarks) : normalizeLandmarks(frame.landmarks);
-    const cropPoints = frame.allHands?.flatMap(h=>h.landmarks) ?? frame.landmarks;
+    if (!video || !frame || (frame.hands !== 1 && frame.hands !== 2) || performance.now() - frame.at > 400) return null;
+    const landmarks = normalizeLandmarks(frame.landmarks);
     if (!landmarks.length) return null;
-    const xs = cropPoints.map(p => p.x * video.videoWidth);
-    const ys = cropPoints.map(p => p.y * video.videoHeight);
+    const xs = frame.landmarks.map(p => p.x * video.videoWidth);
+    const ys = frame.landmarks.map(p => p.y * video.videoHeight);
     const side = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) * 1.45;
     const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2;
     const canvas = document.createElement('canvas'); canvas.width = 320; canvas.height = 320;
