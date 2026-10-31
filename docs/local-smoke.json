@@ -1,0 +1,22 @@
+{
+  "at": "2026-10-31T06:52:06.777Z",
+  "model": "gemma4:12b",
+  "publicFixturesOnly": true,
+  "prototypeSmokeTest": true,
+  "results": [
+    {
+      "name": "identical enrolled pose",
+      "expected": "test-thumbs-up",
+      "actual": "test-thumbs-up",
+      "passed": true,
+      "elapsedSeconds": 1.53
+    },
+    {
+      "name": "different unassigned pose",
+      "expected": "unknown",
+      "actual": "unknown",
+      "passed": true,
+      "elapsedSeconds": 1.07
+    }
+  ]
+}
