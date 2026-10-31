@@ -7,6 +7,10 @@
 
 ---
 
+## Explore in 3D
+
+The [interactive showcase](docs/showcase/index.html) includes a draggable Three.js hand and selectable feature modules. To run it locally, start a static server from the repository root (for example, `npx serve .`) and open `/docs/showcase/`. It can also be hosted as a static site; GitHub README pages themselves cannot execute JavaScript. The showcase loads Three.js from jsDelivr and needs an internet connection.
+
 ## A gesture can say a lot
 
 Handline connects a gesture you choose to a phrase you choose. Enroll examples with your webcam, hold a pose, and see or hear your saved words. Presets and manual phrase buttons give you a place to start; custom gestures make the vocabulary yours.
