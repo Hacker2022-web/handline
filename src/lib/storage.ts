@@ -12,8 +12,8 @@ export async function loadGestures(): Promise<Gesture[]> {
     const existing = saved.find(g => g.id === preset.id);
     if (!existing) {
       await tx.store.put(preset);
-    } else if (existing.source === 'preset' && (existing.mediaPipeCategory !== preset.mediaPipeCategory || existing.name !== preset.name)) {
-      await tx.store.put({ ...existing, name: preset.name, phrase: preset.phrase, mediaPipeCategory: preset.mediaPipeCategory, enabled: preset.enabled });
+    } else if (existing.source === 'preset' && (existing.mediaPipeCategory !== preset.mediaPipeCategory || existing.name !== preset.name || existing.handMode !== preset.handMode)) {
+      await tx.store.put({ ...existing, name: preset.name, phrase: preset.phrase, mediaPipeCategory: preset.mediaPipeCategory, enabled: preset.enabled, handMode: preset.handMode });
     }
   }
   await tx.done;
