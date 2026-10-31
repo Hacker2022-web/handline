@@ -1,4 +1,6 @@
 import express from 'express';
+import { createElevenLabsRouter } from './elevenlabs';
+import { createConversationRouter } from './conversation';
 import { totalmem } from 'node:os';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -9,6 +11,8 @@ export function createApp(config: ProviderConfig, fetcher: typeof fetch = fetch)
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '2mb' }));
+  app.use('/api/elevenlabs',createElevenLabsRouter());
+  app.use('/api',createConversationRouter(config,fetcher));
   app.get('/api/status', async (_req, res) => {
     const memoryGB = Math.round(totalmem() / 1024 ** 3);
     const local = { ready: false, model: config.localModel, installed: false, memoryGB, message: 'Ollama is not running. Start Ollama to use custom gestures locally.' };
@@ -33,8 +37,9 @@ export function createApp(config: ProviderConfig, fetcher: typeof fetch = fetch)
     const controller = new AbortController();
     res.on('close', () => { if (!res.writableEnded) controller.abort(); });
     try {
-      const gestureId = await verifyGesture(parsed.data, config, fetcher, controller.signal);
-      res.json({ gestureId });
+      let inspection = {};
+      const gestureId = await verifyGesture(parsed.data, config, fetcher, controller.signal, data=>{inspection=data;});
+      res.json({ gestureId, ...inspection });
     } catch (error) {
       res.status(error instanceof ProviderError ? error.status : 503).json({ error: error instanceof ProviderError ? error.message : 'Verification unavailable. Presets and manual phrases are still available.' });
     }

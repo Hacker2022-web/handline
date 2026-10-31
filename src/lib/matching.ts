@@ -10,12 +10,12 @@ export function normalizeLandmarks(points: Landmark[]): number[] {
 }
 
 export function landmarkDistance(a: number[], b: number[]): number {
-  if (a.length !== 63 || b.length !== 63 || !a.every(Number.isFinite) || !b.every(Number.isFinite)) return Infinity;
+  if (![63, 126].includes(a.length) || b.length !== a.length || !a.every(Number.isFinite) || !b.every(Number.isFinite)) return Infinity;
   return Math.sqrt(a.reduce((sum, value, i) => sum + (value - b[i]) ** 2, 0) / a.length);
 }
 
 export function rankCandidates(landmarks: number[], gestures: Gesture[], threshold = 0.16) {
-  return gestures.filter(g => g.enabled && g.source === 'custom' && g.samples.length >= 8)
+  return gestures.filter(g => g.enabled && g.source === 'custom' && g.samples.length >= 8 && (g.handMode === 'dual' ? landmarks.length === 126 : landmarks.length === 63))
     .map(gesture => {
       const distances = gesture.samples.map(s => landmarkDistance(landmarks, s.landmarks)).sort((a, b) => a - b);
       // Requiring the closest three avoids a single accidental enrollment outlier.
@@ -32,3 +32,11 @@ export function findOverlaps(samples: { landmarks: number[] }[], gestures: Gestu
     .filter(g => samples.filter(s => g.samples.some(r => landmarkDistance(s.landmarks, r.landmarks) < 0.13)).length >= 3)
     .map(g => g.name);
 }
+
+// Shared origin and palm scale retain inter-wrist displacement as well as orientation.
+export function normalizeDualHandLandmarks(left: Landmark[], right: Landmark[]): number[] {
+  if (!normalizeLandmarks(left).length || !normalizeLandmarks(right).length) return [];
+  const scale = (Math.hypot(left[9].x-left[0].x,left[9].y-left[0].y)+Math.hypot(right[9].x-right[0].x,right[9].y-right[0].y))/2;
+  return [...left,...right].flatMap(p=>[(p.x-left[0].x)/scale,(p.y-left[0].y)/scale,(p.z-left[0].z)/scale*0.4]);
+}
+export function matchScore(distance: number) { return Math.max(0, Math.min(100, Math.round((1-distance/0.32)*100))); }

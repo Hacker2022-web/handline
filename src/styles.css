@@ -321,3 +321,22 @@ td { padding: 17px 13px; font-size: 11px; border-bottom: 1px solid #e2e9da; colo
 .muted { color: #66785d; }
 @media (max-width: 580px) { .phrase-button strong { font-size: 16px; } .phrase-button small { font-size: 10px; } .recognition-copy p { font-size: 10px; } .camera-empty p { font-size: 11px; } }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+.match-badge {font:600 12px var(--font-mono);padding:7px 10px;border-radius:8px;background:#4b5750;color:#fff;white-space:nowrap}
+.score-medium {background:#766033;color:#fff4d8}.score-high {background:#345f47;color:#e9ffe9}
+.reasoner-drawer {padding:14px 20px;background:#17271f;border-top:1px solid #4c6353;font-size:12px;color:#d6e8d9}
+.reasoner-drawer summary {cursor:pointer;min-height:32px;font-weight:600}.reasoner-drawer p{margin:10px 0;line-height:1.7}.reasoner-drawer img{max-width:100%;border-radius:8px}.reasoner-drawer[open]{animation:breathe-in .3s ease-out}
+@keyframes breathe-in {from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.dark {color-scheme:dark;background:#0f1713;color:#e2ede5}
+.dark .sidebar,.dark .topbar {background:#141e18;border-color:#35483c}
+.dark .app-main,.dark main {background:#0f1713;color:#e2ede5}
+.dark .message-panel,.dark .gesture-card,.dark .runtime-card,.dark .dialog,.dark .phrase-button,.dark .search-field,.dark .button-secondary {background:#1a2620;color:#e2ede5;border-color:#415a4a}
+.dark .selected-runtime,.dark .phrase-selected,.dark .nav-active,.dark .add-gesture-card,.dark .practice-start,.dark .empty-state,.dark .consent-label,.dark .setup-guide {background:#243e30;border-color:#698b76;color:#e2ede5}
+.dark h1,.dark h2,.dark h3,.dark strong,.dark .message-text,.dark .phrase-button strong,.dark .field,.dark .runtime-details dd {color:#e2ede5}
+.dark p,.dark .muted,.dark .field-help,.dark .dialog-intro,.dark .eyebrow,.dark small,.dark .message-caption,.dark .phrase-button small,.dark .text-button,.dark .sidebar nav>button,.dark .breadcrumb,.dark .app-footer {color:#b9cdbf}
+.dark .field input,.dark .field textarea,.dark .field select,.dark .mode-switch,.dark .mode-switch button[aria-pressed=true] {background:#142019;color:#e2ede5;border-color:#66816e}
+.dark .gesture-icon,.dark .runtime-icon,.dark .tag,.dark .sample,.dark .count-pill {background:#2b4535;color:#d0e7d4;border-color:#526c59}
+.dark .settings-section,.dark .footnote-box,.dark .workspace-bottom,.dark .dialog-footer,.dark td,.dark th {border-color:#415a4a}
+.dark .notice {background:#3c3323;border-color:#86704e;color:#fff0c8}.dark .error-text {color:#ffc7aa}
+.dark .button-primary {background:#4e876e;color:#fff}.dark .message-text>span{color:#b0c9a6}
+@media(max-width:580px){.topbar-actions{flex-wrap:wrap}.match-badge{font-size:10px}.camera-local-label{display:none}}

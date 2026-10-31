@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { isAmbiguous, normalizeLandmarks, rankCandidates, landmarkDistance } from '../lib/matching';
+import { isAmbiguous, normalizeLandmarks, rankCandidates, landmarkDistance, normalizeDualHandLandmarks, matchScore } from '../lib/matching';
 import { StabilityGate } from '../lib/stability';
 import type { Gesture, GestureSample, Settings } from '../lib/types';
 import type { Observation } from './useCamera';
@@ -8,7 +8,7 @@ type RecognitionState = { label: string; detail: string; progress: number; kind:
 const IDLE: RecognitionState = { label: 'Ready when you are', detail: 'Start the camera, then hold one gesture.', progress: 0, kind: 'idle' };
 export function useRecognition(options: {
   gestures: Gesture[]; settings: Settings; consent: boolean; active: boolean;
-  capture: () => GestureSample | null; onRecognized: (gesture: Gesture) => void;
+  capture: (mode?: 'single' | 'dual') => GestureSample | null; onRecognized: (gesture: Gesture) => void;
 }) {
   const latest = useRef(options); latest.current = options;
   const gate = useRef(new StabilityGate(options.settings.holdMs));
@@ -16,30 +16,39 @@ export function useRecognition(options: {
   const pending = useRef<AbortController | null>(null);
   const frameRef = useRef<Observation | null>(null);
   const settled = useRef<RecognitionState | null>(null);
+  const [score, setScore] = useState(0);
+  const [inspection, setInspection] = useState<{reasoning:string;contactSheet?:string;latencyMs:number}|null>(null);
+  const [inspect, setInspect] = useState(false);
+  const inspectRef = useRef(false); inspectRef.current=inspect;
+  const vector = (f:Observation) => f.hands === 2 && f.allHands?.length === 2 ? normalizeDualHandLandmarks(f.allHands[0].landmarks,f.allHands[1].landmarks) : f.hands === 1 ? normalizeLandmarks(f.landmarks) : [];
   const [state, setState] = useState<RecognitionState>(IDLE);
 
   const reset = useCallback(() => {
     epoch.current++; pending.current?.abort(); pending.current = null;
     gate.current.reset(); settled.current = null; setState(IDLE);
   }, []);
-  useEffect(() => { gate.current.holdMs = options.settings.holdMs; reset(); return () => { epoch.current++; pending.current?.abort(); }; }, [options.active, options.gestures, options.settings.runtime, options.settings.holdMs, options.consent, reset]);
+  useEffect(() => { gate.current.holdMs = options.settings.holdMs; reset(); return () => { epoch.current++; pending.current?.abort(); }; }, [options.active, options.gestures, options.settings.runtime, options.settings.holdMs, options.settings.minConfidence, options.consent, reset]);
 
   const onFrame = useCallback((frame: Observation) => {
     frameRef.current = frame;
     const current = latest.current;
     if (!current.active || document.hidden) return;
-    const normalized = frame.hands === 1 ? normalizeLandmarks(frame.landmarks) : [];
-    const candidates = rankCandidates(normalized, current.gestures);
-    const preset = frame.hands === 1 && frame.score >= 0.65 ? current.gestures.find(g => g.enabled && g.source === 'preset' && g.mediaPipeCategory === frame.category) : undefined;
+    const normalized = vector(frame);
+    const threshold = Math.max(50,current.settings.minConfidence ?? 50);
+    const candidates = rankCandidates(normalized, current.gestures, 0.32);
+    const preset = frame.hands === 1 ? current.gestures.find(g => g.enabled && g.source === 'preset' && g.mediaPipeCategory === frame.category) : undefined;
     const custom = candidates.length && !isAmbiguous(candidates) ? candidates[0].gesture : undefined;
     // Explicitly enrolled custom poses take precedence over editable starter mappings.
     // Conflicting custom matches must not accidentally fall through to a preset phrase.
-    const match = isAmbiguous(candidates) ? undefined : custom ?? preset;
+    const confidence = candidates.length ? matchScore(candidates[0].distance) : preset ? Math.round(frame.score*100) : 0;
+    setScore(confidence);
+    const match = isAmbiguous(candidates) || confidence < threshold ? undefined : custom ?? preset;
+    gate.current.holdMs = match?.priority && match.handMode === 'dual' ? 400 : current.settings.holdMs;
     const result = gate.current.update(match?.id ?? null, frame.at);
     if (!match) {
       if (pending.current) { epoch.current++; pending.current.abort(); pending.current = null; }
       if (!result.latched) settled.current = null;
-      setState({ label: frame.hands > 1 ? 'Use one hand' : 'Unknown gesture', detail: frame.hands > 1 ? 'Two-hand gestures are not supported.' : isAmbiguous(candidates) ? 'These gestures look too similar. Try a more distinct pose.' : frame.hands ? 'No confident match. Nothing will be spoken.' : 'Bring one hand into the camera view.', progress: 0, kind: 'idle' });
+      setState({ label: 'Unknown gesture', detail: isAmbiguous(candidates) ? 'These gestures look too similar. Try a more distinct pose.' : frame.hands ? 'No confident match. Nothing will be spoken.' : 'Bring one hand into the camera view.', progress: 0, kind: 'idle' });
       return;
     }
     if (pending.current) {
@@ -60,7 +69,7 @@ export function useRecognition(options: {
     if (current.settings.runtime === 'cloud' && !current.consent) {
       settled.current = { label: 'Cloud permission needed', detail: 'Allow selected images in Runtime & setup, or choose Local.', progress: 0, kind: 'error' }; setState(settled.current); return;
     }
-    const sample = current.capture();
+    const sample = current.capture(match.handMode);
     if (!sample) { settled.current = { label: 'Unknown gesture', detail: 'The hand moved before capture. Release and try again.', progress: 0, kind: 'idle' }; setState(settled.current); return; }
     const ownEpoch = epoch.current;
     const controller = new AbortController(); pending.current = controller;
@@ -70,15 +79,16 @@ export function useRecognition(options: {
       try {
         const response = await fetch('/api/verify-gesture', {
           method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ runtime: current.settings.runtime, cloudConsent: current.consent, image: sample.referenceCrop, candidates: candidates.map(c => ({ id: c.gesture.id, name: c.gesture.name, references: [...c.gesture.samples].sort((a, b) => landmarkDistance(sample.landmarks, a.landmarks) - landmarkDistance(sample.landmarks, b.landmarks)).slice(0, 2).map(s => s.referenceCrop) })) }),
+          body: JSON.stringify({ runtime: current.settings.runtime, cloudConsent: current.consent, inspect: inspectRef.current, image: sample.referenceCrop, candidates: candidates.map(c => ({ id: c.gesture.id, name: c.gesture.name, references: [...c.gesture.samples].sort((a, b) => landmarkDistance(sample.landmarks, a.landmarks) - landmarkDistance(sample.landmarks, b.landmarks)).slice(0, 2).map(s => s.referenceCrop) })) }),
         });
         const data = await response.json();
         if (epoch.current !== ownEpoch || controller.signal.aborted || !latest.current.active || document.hidden) return;
+        if (inspectRef.current && data.contactSheet) setInspection({reasoning: data.reasoning ?? 'No visual explanation returned.',contactSheet:data.contactSheet,latencyMs:data.latencyMs ?? 0});
         if (!response.ok) throw new Error(data.error ?? 'Verification unavailable');
         const lastFrame = frameRef.current;
         const chosen = candidates.find(c => c.gesture.id === data.gestureId)?.gesture;
-        const freshCandidates = lastFrame && lastFrame.hands === 1 && performance.now() - lastFrame.at < 400 ? rankCandidates(normalizeLandmarks(lastFrame.landmarks), latest.current.gestures) : [];
-        if (!chosen || freshCandidates[0]?.gesture.id !== chosen.id || isAmbiguous(freshCandidates)) {
+        const freshCandidates = lastFrame && [1,2].includes(lastFrame.hands) && performance.now() - lastFrame.at < 400 ? rankCandidates(vector(lastFrame), latest.current.gestures, 0.32) : [];
+        if (!chosen || freshCandidates[0]?.gesture.id !== chosen.id || isAmbiguous(freshCandidates) || matchScore(freshCandidates[0]?.distance ?? Infinity) < Math.max(50,latest.current.settings.minConfidence ?? 50)) {
           settled.current = { label: 'Unknown gesture', detail: 'No confident visual match. Nothing was spoken.', progress: 0, kind: 'idle' };
         } else {
           settled.current = { label: chosen.name, detail: 'Message selected. Lower your hand to repeat.', progress: 1, kind: 'recognized' };
@@ -92,5 +102,5 @@ export function useRecognition(options: {
       } finally { if (pending.current === controller) pending.current = null; }
     })();
   }, []);
-  return { state, onFrame, reset };
+  return { state, score, inspection, inspect, setInspect, onFrame, reset };
 }

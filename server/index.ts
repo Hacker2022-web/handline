@@ -1,4 +1,6 @@
-import 'dotenv/config';
+import { config as loadEnv } from 'dotenv';
+loadEnv({path:'.env.local', quiet:true});
+loadEnv({quiet:true});
 import { createApp } from './app';
 
 const ollamaURL = process.env.OLLAMA_URL ?? 'http://127.0.0.1:11434';

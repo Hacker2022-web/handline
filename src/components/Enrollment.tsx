@@ -9,6 +9,8 @@ export function Enrollment({ gesture, gestures, camera, onSave, onClose }: {
   gesture?: Gesture; gestures: Gesture[]; camera: ReturnType<typeof useCamera>;
   onSave: (gesture: Gesture) => Promise<void>; onClose: () => void;
 }) {
+  const [handMode, setHandMode] = useState<'single' | 'dual'>(gesture?.handMode ?? 'single');
+  const [priority, setPriority] = useState(gesture?.priority ?? false);
   const [name, setName] = useState(gesture?.name ?? '');
   const [phrase, setPhrase] = useState(gesture?.phrase ?? '');
   const [samples, setSamples] = useState<GestureSample[]>(gesture?.samples ?? []);
@@ -30,12 +32,12 @@ export function Enrollment({ gesture, gestures, camera, onSave, onClose }: {
   }, [camera.status, camera.videoRef]);
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
   function capture() {
-    const sample = camera.capture();
-    if (!sample) { setError('Show exactly one clear hand in the camera before capturing.'); return; }
+    const sample = camera.capture(handMode);
+    if (!sample) { setError('Show the selected number of clear hands in the camera before capturing.'); return; }
     setSamples(previous => [...previous, sample]); setError(''); setAcknowledged(false); setCooldown(true);
     const category = camera.observationRef.current?.category;
     const match = gestures.find(g => g.enabled && g.source === 'preset' && g.mediaPipeCategory === category);
-    if (match) setPresetOverlap(match.name);
+    if (match && handMode === 'single') setPresetOverlap(match.name);
     timerRef.current = setTimeout(() => setCooldown(false), 450);
   }
   async function submit(e: React.FormEvent) {
@@ -45,19 +47,21 @@ export function Enrollment({ gesture, gestures, camera, onSave, onClose }: {
     if (!isPreset && (overlaps.length || presetOverlap) && !acknowledged) { setError('Review the overlap warning and confirm before saving.'); return; }
     setBusy(true);
     try {
-      await onSave({ id: gesture?.id ?? `custom-${crypto.randomUUID()}`, name: name.trim(), phrase: phrase.trim(), source: gesture?.source ?? 'custom', mediaPipeCategory: gesture?.mediaPipeCategory, enabled: gesture?.enabled ?? true, samples });
+      await onSave({ id: gesture?.id ?? `custom-${crypto.randomUUID()}`, name: name.trim(), phrase: phrase.trim(), source: gesture?.source ?? 'custom', mediaPipeCategory: gesture?.mediaPipeCategory, enabled: gesture?.enabled ?? true, handMode, priority, samples });
       onClose();
     } catch { setError('Could not save to this browser. Check available storage and try again.'); }
     finally { setBusy(false); }
   }
   return <Dialog title={isPreset ? 'Make this phrase yours' : gesture ? 'Edit your gesture' : 'A new way to say it'} onClose={onClose} wide={!isPreset}>
     <form onSubmit={submit}>
-      <p className="dialog-intro">{isPreset ? 'This gesture always uses your saved words. Change them whenever you need.' : 'Give a repeatable, one-hand pose a name and the words you want it to say.'}</p>
+      <p className="dialog-intro">{isPreset ? 'This gesture always uses your saved words. Change them whenever you need.' : 'Give a repeatable hand pose a name and the words you want it to say.'}</p>
       <div className={isPreset ? 'space-y-5' : 'enrollment-grid'}>
         <div className="space-y-5">
           <label className="field">Gesture name<input maxLength={80} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. A little water" required /></label>
           <label className="field">Exact phrase<textarea maxLength={300} value={phrase} onChange={e => setPhrase(e.target.value)} placeholder="Could I have some water, please?" rows={3} required /><span className="field-help">These are the exact words that will appear and be spoken.</span></label>
           {!isPreset && <>
+            <label className="field">Hands in this gesture<select value={handMode} onChange={e=>{setHandMode(e.target.value as 'single'|'dual');setSamples([]);setAcknowledged(false);}}><option value="single">One Hand</option><option value="dual">Two Hands</option></select></label>
+            {handMode === 'dual' && <label className="checkbox-label"><input type="checkbox" checked={priority} onChange={e=>setPriority(e.target.checked)}/>Priority attention gesture (400 ms hold). Local alert only; does not contact emergency services.</label>}
             <div className="section-label"><h3>Teach your gesture</h3><span className="mono">{samples.length} / 8 minimum</span></div>
             <p className="muted text-sm">Capture the same pose eight times. Vary the distance and angle a little; keep your fingers clearly visible.</p>
             <div className="sample-grid" aria-label={`${samples.length} recorded samples`}>
@@ -70,7 +74,7 @@ export function Enrollment({ gesture, gestures, camera, onSave, onClose }: {
           <div className="enrollment-camera">
             <video ref={previewRef} muted playsInline className="mirror" aria-label="Enrollment camera preview" />
             {camera.status !== 'ready' && <div className="enrollment-camera-empty"><Hand size={46} weight="thin" /><span>{camera.status === 'loading' ? 'Preparing hand tracking…' : 'Your hand goes here'}</span><button type="button" className="button button-light" disabled={camera.status === 'loading'} onClick={() => void camera.start()}><Camera size={18} />{camera.status === 'loading' ? 'Starting camera…' : 'Start camera'}</button></div>}
-            {camera.status === 'ready' && <span className="camera-mini-status"><span className="status-dot" />{camera.handCount === 1 ? 'One hand detected' : camera.handCount > 1 ? 'Use one hand' : 'Looking for your hand'}</span>}
+            {camera.status === 'ready' && <span className="camera-mini-status"><span className="status-dot" />{camera.handCount === 1 ? 'One hand detected' : camera.handCount > 1 ? 'Two hands detected' : 'Looking for your hand'}</span>}
           </div>
           <button type="button" className="button button-primary w-full mt-4" disabled={camera.status !== 'ready' || cooldown || samples.length >= 12} onClick={capture}><Camera size={19} />{samples.length >= 12 ? '12 examples captured' : `Capture sample ${samples.length + 1}`}</button>
           {camera.error && <p role="alert" className="error-text mt-3">{camera.error}</p>}
