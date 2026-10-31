@@ -261,6 +261,8 @@ npm run build
 
 ## Handheld device demo
 
+[Download the Apple Silicon handheld demo DMG](https://github.com/TatvagnaTandel/handline/releases/tag/v1.0.0-handheld-demo).
+
 For a separate handheld presentation, select **Handheld demo** in the app, or open `/?device=handheld`. The macOS app also offers **Demo → Handheld demo** and **Demo → Desktop demo**. The orange device frame uses the existing webcam recognition, saved phrases, runtime selection, and speech engine. This is a software concept demonstration; physical buttons, battery telemetry, cellular connectivity and device hardware are not connected.
 
 ![Handheld demo](docs/handheld-demo.png)
